@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+<!-- This is where the main content goes. -->
+{% block body %}
+<div id="melon-list">
+  {% for melon in melon_list %}
+    <div class="card text-center">
+      <img class="melon-image" src="{{ melon.image_url }}">
+      <a href="{{url_for('melon_deets', melon_id=melon.melon_id)}}">
+        <h3>{{melon.common_name}}</h3>
+      </a>
+      {{melon.price_str()}}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
