@@ -1,4 +1,5 @@
 from flask import Flask, render_template, redirect, flash, request, session
+from forms import LoginForm
 import jinja2
 import melons
 
@@ -6,9 +7,40 @@ app = Flask(__name__)
 app.secret_key = "dev"
 app.jinja_env.undefined = jinja2.StrictUndefined
 
+@app.errorhandler(404)
+def error_404(e):
+  return render_template("404.html")
+
 @app.route("/")
 def homepage():
   return render_template("base.html")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+  form = LoginForm(request.form)
+
+  if form.validate_on_submit():
+    username = form.username.data
+    password = form.password.data
+
+    user = customers.get_by_username(username)
+
+    if not user or user["password"] != password:
+      flash("Invalid username or password")
+      return redirect("/login")
+    
+    session["username"] = user["username"]
+    flash("Logged In")
+    return redirect("/melons")
+
+  return render_template("login.html", form=form)
+
+@app.route("/logout")
+def logout():
+  del session["username"]
+  flash("Logged Out")
+  return redirect("/login")
 
 @app.route("/melons")
 def all_melons():
@@ -24,14 +56,48 @@ def melon_deets(melon_id):
 
 @app.route("/add_to_cart/<melon_id>")
 def add_to_cart(melon_id):
+  if "username" not in session:
+    return redirect("/login")
 
   if "cart" not in session:
     session["cart"] = {}
-  return f"{melon_id} added to cart"
+  cart = session["cart"]
+
+  cart[melon_id] = cart.get(melon_id, 0) + 1
+  session.modified = True
+  flash(f"Melon {melon_id} succesfully added to cart.")
+  print(cart)
+
+  return redirect("/cart")
 
 @app.route("/cart")
-def cart():
-  return render_template("cart.html")
+def show_cart():
+  if "username" not in session:
+    return redirect("/login")
+
+  order_total = 0
+  cart_melons = []
+
+  cart = session.get("cart", {})
+
+  for melon_id, quantity in cart.items():
+    melon = melons.get_by_id(melon_id)
+
+    total_cost = quantity * melon.price
+    order_total += total_cost
+
+    melon.quantity = quantity
+    melon.total_cost = total_cost
+
+    cart_melons.append(melon)
+
+  return render_template("cart.html", cart_melons=cart_melons, order_total=order_total)
+
+@app.route("/empty-cart")
+def empty_cart():
+   session["cart"] = {}
+
+   return redirect("/cart")
 
 if __name__ == "__main__":
   app.env = "development"
