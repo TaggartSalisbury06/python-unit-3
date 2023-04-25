@@ -1,5 +1,6 @@
 from flask import Flask, render_template, redirect, flash, request, session
 from forms import LoginForm
+import customers
 import jinja2
 import melons
 
@@ -21,19 +22,23 @@ def login():
   form = LoginForm(request.form)
 
   if form.validate_on_submit():
+    # Form has been submitted with valid data
     username = form.username.data
     password = form.password.data
 
+    # Check to see if a registered user exists with this username
     user = customers.get_by_username(username)
 
-    if not user or user["password"] != password:
+    if not user or user['password'] != password:
       flash("Invalid username or password")
-      return redirect("/login")
-    
-    session["username"] = user["username"]
-    flash("Logged In")
+      return redirect('/login')
+
+    # Store username in session to keep track of logged in user
+    session["username"] = user['username']
+    flash("Logged in.")
     return redirect("/melons")
 
+   # Form has not been submitted or data was not valid
   return render_template("login.html", form=form)
 
 @app.route("/logout")
